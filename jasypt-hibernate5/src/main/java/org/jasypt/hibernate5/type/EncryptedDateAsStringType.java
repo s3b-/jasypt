@@ -102,7 +102,7 @@ public final class EncryptedDateAsStringType extends AbstractEncryptedAsStringTy
      * @see org.jasypt.hibernate.type.AbstractEncryptedAsStringType#convertToObject(java.lang.String)
      */
     protected Object convertToObject(final String string) {
-        final long timeMillis = Long.valueOf(string).longValue();
+        final long timeMillis = Long.parseLong(string);
         return new Date(timeMillis);
     }
 
@@ -110,13 +110,14 @@ public final class EncryptedDateAsStringType extends AbstractEncryptedAsStringTy
     /**
      * @see org.jasypt.hibernate.type.AbstractEncryptedAsStringType#convertToString(java.lang.Object)
      */
+    @Override
     protected String convertToString(final Object object) {
         final long timeMillis = ((Date) object).getTime();
         return String.valueOf(timeMillis);
     }
 
 
-    public Class returnedClass() {
+    public Class<Date> returnedClass() {
         return Date.class;
     }
     

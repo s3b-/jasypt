@@ -116,7 +116,7 @@ public final class EncryptedCalendarAsStringType extends AbstractEncryptedAsStri
     protected Object convertToObject(final String string) {
         final String[] stringTokens = CommonUtils.split(string);
         TimeZone tz = null;
-        final long timeMillis = Long.valueOf(stringTokens[0]).longValue();
+        final long timeMillis = Long.parseLong(stringTokens[0]);
         if (this.storeTimeZone.booleanValue()) {
             tz = TimeZone.getTimeZone(stringTokens[1]);
         } else {
@@ -132,10 +132,11 @@ public final class EncryptedCalendarAsStringType extends AbstractEncryptedAsStri
     /**
      * @see org.jasypt.hibernate.type.AbstractEncryptedAsStringType#convertToString(java.lang.Object)
      */
+    @Override
     protected String convertToString(final Object object) {
-        final StringBuffer strBuff = new StringBuffer();
+        final StringBuilder strBuff = new StringBuilder();
         final long timeMillis = ((Calendar) object).getTimeInMillis();
-        strBuff.append((new Long(timeMillis)).toString());
+        strBuff.append(Long.toString(timeMillis));
         if (this.storeTimeZone.booleanValue()) {
             strBuff.append(" ");
             strBuff.append(((Calendar) object).getTimeZone().getID());
@@ -143,9 +144,8 @@ public final class EncryptedCalendarAsStringType extends AbstractEncryptedAsStri
         return strBuff.toString();
     }
  
-    
+    @Override
     public synchronized void setParameterValues(final Properties parameters) {
-        
       	super.setParameterValues(parameters);
       	
         final String paramStoreTimeZone = parameters.getProperty(ParameterNaming.STORE_TIME_ZONE);
@@ -155,9 +155,7 @@ public final class EncryptedCalendarAsStringType extends AbstractEncryptedAsStri
         
     }
 
-
-    public Class returnedClass() {
+    public Class<Calendar> returnedClass() {
         return Calendar.class;
     }
-
 }

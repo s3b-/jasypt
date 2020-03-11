@@ -26,7 +26,6 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Properties;
 
-import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.ParameterizedType;
 import org.hibernate.usertype.UserType;
@@ -47,8 +46,8 @@ import org.jasypt.hibernate5.encryptor.HibernatePBEEncryptorRegistry;
 public abstract class AbstractEncryptedAsStringType 
         implements UserType, ParameterizedType {
 
-    static final int sqlType = Types.VARCHAR;
-    static final int[] sqlTypes = new int[]{ sqlType };
+    static final int SQLTYPE = Types.VARCHAR;
+    static final int[] sqlTypes = new int[]{ SQLTYPE };
     
     private boolean initialized = false;
     private boolean useEncryptorName = false;
@@ -79,27 +78,20 @@ public abstract class AbstractEncryptedAsStringType
     }
     
     public final int[] sqlTypes() {
-        return (int[]) sqlTypes.clone();
+        return sqlTypes.clone();
     }
 
-    
-    public abstract Class returnedClass();
-
-    
-    public final boolean equals(final Object x, final Object y) 
-            throws HibernateException {
+    public final boolean equals(final Object x, final Object y) {
         return x == y || ( x != null && y != null && x.equals( y ) );
     }
     
     
-    public final Object deepCopy(final Object value)
-            throws HibernateException {
+    public final Object deepCopy(final Object value) {
         return value;
     }
     
     
-    public final Object assemble(final Serializable cached, final Object owner)
-            throws HibernateException {
+    public final Object assemble(final Serializable cached, final Object owner) {
         if (cached == null) {
             return null;
         }
@@ -107,8 +99,7 @@ public abstract class AbstractEncryptedAsStringType
     }
 
     
-    public final Serializable disassemble(final Object value) 
-            throws HibernateException {
+    public final Serializable disassemble(final Object value) {
         if (value == null) {
             return null;
         }
@@ -121,21 +112,19 @@ public abstract class AbstractEncryptedAsStringType
     }
 
 
-    public final int hashCode(final Object x)
-            throws HibernateException {
+    public final int hashCode(final Object x) {
         return x.hashCode();
     }
 
     
-    public final Object replace(final Object original, final Object target, final Object owner) 
-            throws HibernateException {
+    public final Object replace(final Object original, final Object target, final Object owner) {
         return original;
     }
 
     
     public Object nullSafeGet(final ResultSet rs, final String[] names,
             final SharedSessionContractImplementor session, final Object owner)
-            throws HibernateException, SQLException {
+            throws SQLException {
         
         checkInitialization();
         final String message = rs.getString(names[0]);
@@ -145,11 +134,11 @@ public abstract class AbstractEncryptedAsStringType
 
     
     public void nullSafeSet(final PreparedStatement st, final Object value, final int index,
-            final SharedSessionContractImplementor session) throws HibernateException, SQLException {
+            final SharedSessionContractImplementor session) throws SQLException {
 
         checkInitialization();
         if (value == null) {
-            st.setNull(index, sqlType);
+            st.setNull(index, SQLTYPE);
         } else {
             st.setString(index, this.encryptor.encrypt(convertToString(value)));
         }
@@ -174,56 +163,34 @@ public abstract class AbstractEncryptedAsStringType
         
         this.useEncryptorName = false;
         if (paramEncryptorName != null) {
-            
-            if ((paramAlgorithm != null) ||
-                (paramPassword != null) ||
-                (paramKeyObtentionIterations != null)) {
-                
-                throw new EncryptionInitializationException(
-                        "If \"" + ParameterNaming.ENCRYPTOR_NAME + 
-                        "\" is specified, none of \"" +
-                        ParameterNaming.ALGORITHM + "\", \"" +
-                        ParameterNaming.PASSWORD + "\" or \"" + 
-                        ParameterNaming.KEY_OBTENTION_ITERATIONS + "\" " +
-                        "can be specified");
-                
-            }
-            this.encryptorName = paramEncryptorName;
-            this.useEncryptorName = true;
-            
-        } else if ((paramPassword != null)) {
-
+            setAndUseEncryptorName(paramAlgorithm, paramPassword, paramKeyObtentionIterations, paramEncryptorName);
+        } else if (paramPassword != null) {
             this.password = paramPassword;
             
             if (paramAlgorithm != null) {
                 this.algorithm = paramAlgorithm;
             }
-            
+           
             if (paramProviderName != null) {
                 this.providerName = paramProviderName;
             }
             
             if (paramKeyObtentionIterations != null) {
-
                 try {
-                    this.keyObtentionIterations = 
-                        new Integer(
-                                Integer.parseInt(paramKeyObtentionIterations));
+					this.keyObtentionIterations =
+							Integer.parseInt(paramKeyObtentionIterations);
                 } catch (NumberFormatException e) {
                     throw new EncryptionInitializationException(
                             "Value specified for \"" + 
                             ParameterNaming.KEY_OBTENTION_ITERATIONS + 
                             "\" is not a valid integer");
                 }
-                
             }
             
             if (paramStringOutputType != null) {
                 this.stringOutputType = paramStringOutputType;
             }
-            
         } else {
-            
             throw new EncryptionInitializationException(
                     "If \"" + ParameterNaming.ENCRYPTOR_NAME + 
                     "\" is not specified, then \"" +
@@ -231,18 +198,12 @@ public abstract class AbstractEncryptedAsStringType
                     ParameterNaming.ALGORITHM + "\" and \"" + 
                     ParameterNaming.KEY_OBTENTION_ITERATIONS + "\") " +
                     "must be specified");
-            
         }
     }
 
-    
-    
-    protected synchronized final void checkInitialization() {
-        
+    protected final synchronized void checkInitialization() {
         if (!this.initialized) {
-            
             if (this.useEncryptorName) {
-
                 final HibernatePBEEncryptorRegistry registry = 
                     HibernatePBEEncryptorRegistry.getInstance();
                 final PBEStringEncryptor pbeEncryptor = 
@@ -255,33 +216,7 @@ public abstract class AbstractEncryptedAsStringType
                 this.encryptor = pbeEncryptor;
                 
             } else {
-                
-                final StandardPBEStringEncryptor newEncryptor = 
-                    new StandardPBEStringEncryptor();
-                
-                newEncryptor.setPassword(this.password);
-                
-                if (this.algorithm != null) {
-                    newEncryptor.setAlgorithm(this.algorithm);
-                }
-                
-                if (this.providerName != null) {
-                    newEncryptor.setProviderName(this.providerName);
-                }
-                
-                if (this.keyObtentionIterations != null) {
-                    newEncryptor.setKeyObtentionIterations(
-                            this.keyObtentionIterations.intValue());
-                }
-                
-                if (this.stringOutputType != null) {
-                    newEncryptor.setStringOutputType(this.stringOutputType);
-                }
-                
-                newEncryptor.initialize();
-                
-                this.encryptor = newEncryptor;
-                
+                this.encryptor = createStandardPBEStringEncryptor();
             }
             
             this.initialized = true;
@@ -289,5 +224,38 @@ public abstract class AbstractEncryptedAsStringType
         
     }
     
+    private StandardPBEStringEncryptor createStandardPBEStringEncryptor() {
+        final StandardPBEStringEncryptor newEncryptor = new StandardPBEStringEncryptor();
+        newEncryptor.setPassword(this.password);
+
+        if (this.algorithm != null) {
+            newEncryptor.setAlgorithm(this.algorithm);
+        }
+
+        if (this.providerName != null) {
+            newEncryptor.setProviderName(this.providerName);
+        }
+
+        if (this.keyObtentionIterations != null) {
+            newEncryptor.setKeyObtentionIterations(this.keyObtentionIterations.intValue());
+        }
+
+        if (this.stringOutputType != null) {
+            newEncryptor.setStringOutputType(this.stringOutputType);
+        }
+        newEncryptor.initialize();
+        return newEncryptor;
+    }
     
+    private void setAndUseEncryptorName(final String paramAlgorithm, final String paramPassword,
+            final String paramKeyObtentionIterations, final String paramEncryptorName) {
+        if (paramAlgorithm != null || paramPassword != null || paramKeyObtentionIterations != null) {
+            throw new EncryptionInitializationException("If \"" + ParameterNaming.ENCRYPTOR_NAME
+                    + "\" is specified, none of \"" + ParameterNaming.ALGORITHM + "\", \"" + ParameterNaming.PASSWORD
+                    + "\" or \"" + ParameterNaming.KEY_OBTENTION_ITERATIONS + "\" " + "can be specified");
+
+        }
+        this.encryptorName = paramEncryptorName;
+        this.useEncryptorName = true;
+    }
 }
